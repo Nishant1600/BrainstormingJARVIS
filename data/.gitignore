@@ -1,0 +1,11 @@
+# Everything JARVIS writes at runtime is machine-local. Ignore the lot, then
+# re-admit the two files that are genuinely part of the repo.
+#
+# The reason this is a blanket rule and not a list: `jarvis/tool-token` is the
+# bearer token guarding POST /internal/tool — the only thing standing between a
+# local process and every acting tool JARVIS has. It lives here because
+# JARVIS_DATA_DIR defaults inside the repo, and this repository is public. A
+# single `git add -A` would have published it. Deny by default; allow by name.
+*
+!.gitkeep
+!.gitignore

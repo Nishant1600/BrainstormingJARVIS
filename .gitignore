@@ -1,0 +1,77 @@
+# Environment
+.env
+.env.local
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Data (user-specific, generated at runtime)
+*.db
+data/*.jsonl
+data/active_session.json
+data/.jarvis_output.txt
+
+# Certificates
+*.pem
+
+# Build
+dist/
+.vite/
+frontend/.vite/
+
+# IDE / System
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+.claude/
+.arch/
+
+# Editor / merge junk
+*~
+*.swp
+*.swo
+*.orig
+*.rej
+*.bak
+
+# Coverage
+.coverage*
+htmlcov/
+.coverage.*
+
+context/
+*.db-shm
+*.db-wal
+
+# Author-local working notes. `.agents/` is where cross-agent session
+# summaries live, and where this repo keeps research, milestone checklists
+# and other material that is useful to whoever is building JARVIS but is
+# nobody else's business. Local by default: nothing under it is published.
+.agents/
+# Generated from those summaries, and it links into them. Same rule.
+AGENTS.md
+
+# Superpowers SDD scratch
+.superpowers/
+
+# <!-- orcha:managed:start v2 -->
+# Orcha session summaries — local-only by default. Contains prompt + output
+# excerpts that may include sensitive content. Remove this rule to share
+# session history across team/devices/clones.
+.agents/sessions/
+
+# Claude Code background-session worktrees. Auto-created at
+# <repo>/.claude/worktrees/<slug>/ when a `claude --bg` task needs to write.
+# Always local — never tracked in the parent repo.
+.claude/worktrees/
+# <!-- orcha:managed:end -->

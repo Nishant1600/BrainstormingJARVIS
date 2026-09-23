@@ -1,0 +1,194 @@
+import asyncio
+import os
+
+import pytest
+import pytest_asyncio
+
+
+_symlink_probe: bool | None = None
+
+
+def symlinks_available() -> bool:
+    """Whether this machine can create symlinks, probed once and cached.
+
+    POSIX always can; Windows needs SeCreateSymbolicLinkPrivilege or
+    Developer Mode, and a plain user install has neither — `symlink_to`
+    then raises `OSError: [WinError 1314]`. Containment tests that NEED a
+    link call `require_symlinks()` first and skip cleanly without it,
+    instead of failing on the missing privilege.
+    """
+    global _symlink_probe
+    if _symlink_probe is None:
+        import shutil
+        import tempfile
+        from pathlib import Path
+        probe_dir = Path(tempfile.mkdtemp(prefix="jarvis-link-probe-"))
+        try:
+            target = probe_dir / "target"
+            target.write_text("probe")
+            (probe_dir / "link").symlink_to(target)
+            _symlink_probe = True
+        except (OSError, NotImplementedError):
+            _symlink_probe = False
+        finally:
+            shutil.rmtree(probe_dir, ignore_errors=True)
+    return _symlink_probe
+
+
+def require_symlinks() -> None:
+    """Skip the calling test when this machine cannot make symlinks."""
+    if not symlinks_available():
+        pytest.skip("this machine may not create symlinks (Windows needs "
+                    "the privilege or Developer Mode)")
+
+
+def quoted_cmd(*parts) -> str:
+    """One command line from argv parts, every part double-quoted.
+
+    `brain.command()` and `RunExecutor._command` split the configured
+    binary with POSIX shlex, which treats backslash as an escape — so an
+    unquoted Windows path (`C:\\Tools\\fake.py`) arrives mangled
+    (`C:Toolsfake.py`) and the child never starts. Quoting each part makes
+    the split round-trip exactly; on POSIX the quotes are a no-op for the
+    characters these paths hold. Test fakes only: production binaries are
+    resolved via shutil.which and never split.
+    """
+    return " ".join(f'"{part}"' for part in parts)
+
+
+def pid_alive(pid: int) -> bool:
+    """Whether pid is still running, on either platform.
+
+    POSIX signal 0 does not exist on Windows: there `os.kill(pid, 0)` is a
+    no-op that returns None for a live pid and a dead one alike, so it can
+    prove nothing. The Windows branch asks `tasklist` (ships with the OS,
+    filters server-side) instead.
+    """
+    import sys
+    if sys.platform == "win32":
+        import subprocess
+        try:
+            out = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            raise AssertionError("cannot probe pid liveness on this platform")
+        return str(pid) in (out.stdout or "")
+    try:
+        os.kill(pid, 0)
+        return True
+    except (ProcessLookupError, PermissionError):
+        return False
+
+
+@pytest.fixture(autouse=True)
+def _never_spawn_a_real_brain(monkeypatch):
+    """server.lifespan builds the brain but must not start `claude` under test."""
+    monkeypatch.setenv("JARVIS_BRAIN_AUTOSTART", "0")
+
+
+@pytest.fixture(autouse=True)
+def _never_post_a_real_notification(monkeypatch, request):
+    """No test may spam the developer's Notification Centre.
+
+    Patched on the `notifier` module object itself rather than on `server`, so
+    the `importlib.reload(server_module)` that several test fixtures do cannot
+    hand the real implementation back. test_notifier.py is exempt: it tests
+    notify() itself and mocks the subprocess boundary directly.
+    """
+    if request.module.__name__.endswith("test_notifier"):
+        return
+    import notifier
+
+    async def _blocked(*args, **kwargs):
+        raise AssertionError("a test tried to post a real macOS notification; "
+                             "mock notifier.notify")
+
+    monkeypatch.setattr(notifier, "notify", _blocked)
+
+
+@pytest.fixture(autouse=True)
+def _never_touch_the_real_projects_folder(monkeypatch, tmp_path):
+    """No test may create a directory in the user's real ~/Projects.
+
+    `create_project` writes into JARVIS_PROJECTS_DIR (default ~/Projects) and
+    will create that root if it is missing, so the default is redirected into
+    a tmp_path for every test — the same reasoning as JARVIS_DATA_DIR. A test
+    that wants its own root still sets the variable itself; this only fills in
+    a safe default.
+    """
+    monkeypatch.setenv("JARVIS_PROJECTS_DIR", str(tmp_path / "projects-root"))
+
+
+@pytest.fixture(autouse=True)
+def _never_write_to_the_live_dotenv(monkeypatch, tmp_path):
+    """No test may write into the developer's live `.env`.
+
+    Found the hard way: the settings endpoints write straight into the
+    repository's own .env, so a test that posted a preference silently
+    rewrote the developer's real configuration — and a test written to
+    prove `.env` line injection injected the line for real. Same reasoning
+    as JARVIS_DATA_DIR; a test that wants its own file still sets the
+    variable itself.
+    """
+    monkeypatch.setenv("JARVIS_ENV_FILE", str(tmp_path / "dotenv" / ".env"))
+
+
+@pytest.fixture(autouse=True)
+def _never_write_to_the_live_data_dir(monkeypatch, tmp_path):
+    """No test may write into the user's real `data/`.
+
+    Most tests already set JARVIS_DATA_DIR (and still do — this only fills in
+    a safe default), but a test that merely drives the brain writes there too
+    now that a rate-limit event is persisted: without this, running the suite
+    overwrote the live usage reading with a fixture's fake one.
+    """
+    monkeypatch.setenv("JARVIS_DATA_DIR", str(tmp_path / "data-dir"))
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _no_run_left_mid_flight():
+    """No test may end with a run's driver still starting its child.
+
+    The CI hang, twice, on the macOS runner's Python 3.12 and never on 3.13:
+    a test spawned a run, asserted on the row, and returned in the same
+    millisecond — while `RunExecutor._drive` was still inside
+    `asyncio.create_subprocess_exec`, before the child existed. The loop's
+    teardown then cancelled that task mid-spawn, and 3.12's subprocess
+    transport never completes a cancellation delivered there: the suite sat
+    in `_cancel_all_tasks` until GitHub killed the job 25 minutes later.
+    3.13 completes it, which is why no local run ever showed it.
+
+    So every driver alive at the end of a test is waited for here, inside
+    the test's own loop, before the runner closes it. A test's fake `claude`
+    exits in milliseconds, so the wait is normally nothing; a driver that
+    is queued or reading forever is cancelled only after it has had time to
+    get past the spawn, which is the one place cancellation must not land.
+    """
+    yield
+    me = asyncio.current_task()
+
+    def _alive(qualname: str) -> list:
+        return [t for t in asyncio.all_tasks()
+                if t is not me and not t.done()
+                and getattr(t.get_coro(), "__qualname__", "") == qualname]
+
+    # First, the exact place: asyncio's own pipe-connection task, which
+    # exists only between fork and "the child is up". Whoever spawned it
+    # (a run driver, the brain, a fake `osascript`) is parked on it. Let it
+    # finish — milliseconds — and yield once so the spawner moves on.
+    connecting = _alive("BaseSubprocessTransport._connect_pipes")
+    if connecting:
+        await asyncio.wait(connecting, timeout=5)
+        await asyncio.sleep(0)
+    # Then a run driver still going: give it time to end on its own (a
+    # test's fake claude exits at once) before it is cancelled somewhere
+    # safe to cancel.
+    drivers = _alive("RunExecutor._drive")
+    if not drivers:
+        return
+    _done, pending = await asyncio.wait(drivers, timeout=10)
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.wait(pending, timeout=5)
