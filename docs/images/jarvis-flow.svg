@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-label="How JARVIS works: you speak, the opencode brain thinks, it speaks back and records every run">
+  <defs>
+    <linearGradient id="fbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#060b14"/>
+      <stop offset="100%" stop-color="#0b1a2e"/>
+    </linearGradient>
+    <linearGradient id="node" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#12324f"/>
+      <stop offset="100%" stop-color="#0b1e33"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="380" fill="url(#fbg)" rx="18"/>
+  <g font-family="Segoe UI, Verdana, sans-serif" text-anchor="middle">
+    <g>
+      <rect x="40" y="130" width="180" height="120" rx="14" fill="url(#node)" stroke="#3fa9f5" stroke-width="2">
+        <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2.4s" repeatCount="indefinite"/>
+      </rect>
+      <text x="130" y="175" font-size="40">🎤</text>
+      <text x="130" y="210" font-size="20" fill="#e8f2fc">You speak</text>
+      <text x="130" y="234" font-size="15" fill="#5f8cab"> mic · Chrome/Edge</text>
+    </g>
+    <g>
+      <rect x="330" y="110" width="240" height="160" rx="14" fill="url(#node)" stroke="#3fa9f5" stroke-width="2.5">
+        <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2.4s" begin="0.5s" repeatCount="indefinite"/>
+      </rect>
+      <text x="450" y="160" font-size="40">🧠</text>
+      <text x="450" y="198" font-size="20" fill="#e8f2fc">OpencodeBrain</text>
+      <text x="450" y="222" font-size="15" fill="#5f8cab">one session · runs</text>
+      <text x="450" y="244" font-size="15" fill="#5f8cab">steers · dialogs</text>
+    </g>
+    <g>
+      <rect x="680" y="40" width="220" height="110" rx="14" fill="url(#node)" stroke="#3fa9f5" stroke-width="2">
+        <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2.4s" begin="1s" repeatCount="indefinite"/>
+      </rect>
+      <text x="790" y="80" font-size="32">🔊</text>
+      <text x="790" y="112" font-size="19" fill="#e8f2fc">Fish Audio speaks</text>
+      <text x="790" y="134" font-size="15" fill="#5f8cab">sentence scheduler</text>
+    </g>
+    <g>
+      <rect x="680" y="230" width="220" height="110" rx="14" fill="url(#node)" stroke="#3fa9f5" stroke-width="2">
+        <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2.4s" begin="1.4s" repeatCount="indefinite"/>
+      </rect>
+      <text x="790" y="270" font-size="32">📊</text>
+      <text x="790" y="302" font-size="19" fill="#e8f2fc">Run recorded</text>
+      <text x="790" y="324" font-size="15" fill="#5f8cab">SQLite · dashboard</text>
+    </g>
+    <g>
+      <rect x="980" y="130" width="180" height="120" rx="14" fill="url(#node)" stroke="#3fd98a" stroke-width="2">
+        <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2.4s" begin="1.8s" repeatCount="indefinite"/>
+      </rect>
+      <text x="1070" y="175" font-size="40">📁</text>
+      <text x="1070" y="210" font-size="20" fill="#e8f2fc">Built</text>
+      <text x="1070" y="234" font-size="15" fill="#5f8cab">files on disk</text>
+    </g>
+    <g fill="none" stroke="#3fa9f5" stroke-width="2.5" stroke-dasharray="10 8">
+      <path d="M220 190 H330">
+        <animate attributeName="stroke-dashoffset" from="0" to="-72" dur="1.2s" repeatCount="indefinite"/>
+      </path>
+      <path d="M570 150 C 620 140, 630 95, 680 95">
+        <animate attributeName="stroke-dashoffset" from="0" to="-72" dur="1.2s" repeatCount="indefinite"/>
+      </path>
+      <path d="M570 230 C 620 240, 630 285, 680 285">
+        <animate attributeName="stroke-dashoffset" from="0" to="-72" dur="1.2s" repeatCount="indefinite"/>
+      </path>
+      <path d="M900 285 H980" stroke="#3fd98a">
+        <animate attributeName="stroke-dashoffset" from="0" to="-72" dur="1.2s" repeatCount="indefinite"/>
+      </path>
+    </g>
+  </g>
+</svg>

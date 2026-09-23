@@ -31,14 +31,10 @@ live. Regenerate with `scripts/make_orb_loop.py`.*
 
 A real run, on this machine, through the real server — no mocks:
 
+![Terminal recording: a run is spawned, tokens climb, it succeeds, and hello.txt lands on disk with PROOF-PASSED](docs/images/jarvis-demo.svg)
+
 ```
-POST /api/runs  →  run f9ed9f00… spawned
-status=running in=0 out=0 turns=0
-status=running in=8920 out=174 turns=2
-status=succeeded in=9180 out=185 turns=3
-result_text=Creating your one-line file. DONE
-hello.txt content='HELLO-JARVIS'
-PROOF-PASSED
+POST /api/runs  →  run f9ed9f00… spawned ... status=succeeded ... PROOF-PASSED
 ```
 
 The file exists on disk, the database holds the full event stream
@@ -142,22 +138,7 @@ restarts on 5174, re-allow the mic there.
 
 ## How it works
 
-```mermaid
-flowchart TB
-    mic([Microphone]) --> voice[Web Speech API<br/>frontend/src/voice.ts]
-    voice --> ws[/WebSocket<br/>JSON + audio/]
-    ws --> server[FastAPI<br/>server.py]
-    server --> brain{{"OpencodeBrain<br/>brain.py<br/>one session, one child per turn"}}
-    brain --> speech[speech.py<br/>scheduler]
-    speech --> fish[Fish Audio TTS]
-    fish --> speaker([Speaker])
-    brain --> mcp["jarvis_mcp.py<br/>stdio MCP → POST /internal/tool"]
-    mcp --> server
-    brain --> runs["RunExecutor → run_store SQLite"]
-    runs --> dash["/api/runs · /ws/runs<br/>/dashboard"]
-    server --> watch["opencode_watch<br/>live sessions from opencode.db"]
-    watch --> dash
-```
+![Animated data flow: you speak, the opencode brain thinks, Fish Audio speaks back while the run is recorded and files land on disk](docs/images/jarvis-flow.svg)
 
 The brain is **one conversation**, not a request per turn: the session persists
 server-side in opencode's database, so every turn is a short-lived
